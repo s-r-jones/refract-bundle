@@ -34,7 +34,7 @@ export default function Refract() {
           <ambientLight layers={[0]} />
           <Scene />
         </Suspense>
-        <Perf />
+        {/* <Perf /> */}
       </Canvas>
     </div>
 
