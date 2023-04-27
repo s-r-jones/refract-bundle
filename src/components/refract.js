@@ -1,52 +1,47 @@
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { useEffect, useRef, Suspense, useMemo } from 'react';
+import { Canvas, useThree, useFrame, extend } from '@react-three/fiber';
 import {
   MeshTransmissionMaterial,
   Environment,
   OrbitControls,
   Float,
-  Text,
   RoundedBox,
-  Plane,
   Torus,
-  Html,
-  Cone
+  Cone,
 } from '@react-three/drei'
+import { EffectComposer, SMAA } from '@react-three/postprocessing';
+
+
 import { useControls, Leva } from 'leva'
-import { useEffect, useRef, Suspense } from 'react';
-import { Vector2, Vector3, } from 'three';
+
+import { Vector2, Vector3, WebGLRenderTarget, Color, RGBAFormat, ShaderMaterial } from 'three';
 import { useSpring, animated } from '@react-spring/three';
-import RefractGradient from '../assets/refract_gradient.png'
-import MontserratFont from '../assets/montserrat-v25-latin-800.woff'
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass"
+import ENV_REFRACT from '../assets/Refract_Small.hdr'
+import RefractPostEffect from './post';
+import FXAAEffect from './aa'
+import CustomFXAAEffect from './fxaa'
+import { Perf } from 'r3f-perf';
 
 
 export default function Refract() {
 
   return (
 
-
     <div id="canvas-container" style={{ width: '100vw', height: '100vh' }}>
-      <Canvas camera={{ position: [0, 0, 9.5], far: 50, }} >
-        <ambientLight shadows />
-
-        <Scene />
-
-        <Environment
-          preset='studio'
-          toneMapped={false}
-          background
-        >
-
-        </Environment>
-
-        {/* <Perf position="top-left" /> */}
-
+      <Canvas camera={{ position: [0, 0, 9.5], far: 50, }} renderer={{ alpha: true }} >
+        <Suspense>
+          <ambientLight layers={[0]} />
+          <Scene />
+        </Suspense>
+        <Perf />
       </Canvas>
     </div>
 
   )
 }
 
-export function Scene(props) {
+export function Scene({ }) {
   const config = useControls({
     meshPhysicalMaterial: false,
     transmissionSampler: false,
@@ -69,9 +64,43 @@ export function Scene(props) {
 
   })
 
+  const { viewport, gl, size, camera, scene } = useThree()
+  const pixelRatio = gl.getPixelRatio()
+  const composerRef = useRef()
+
+  const cam2RenderTarget = useMemo(() => {
+    const renderTarget = new WebGLRenderTarget(size.width, size.height, { format: RGBAFormat });
+    return renderTarget;
+  }, [])
+
+  useEffect(() => {
+    const handleResize = () => {
+      const newWidth = gl.domElement.clientWidth;
+      const newHeight = gl.domElement.clientHeight;
+
+      cam2RenderTarget.setSize(newWidth, newHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [cam2RenderTarget, gl])
+
+  function addFXAAPass(composer, viewport, pixelRatio) {
+    const fxaaPass = new ShaderPass(FXAAShader);
+    console.log(composer)
+    fxaaPass.renderToScreen = false
+    fxaaPass.material.uniforms['resolution'].value.x = 1 / (viewport.width * pixelRatio);
+    fxaaPass.material.uniforms['resolution'].value.y = 1 / (viewport.height * pixelRatio);
+
+    composer.addPass(fxaaPass);
+  }
 
 
-  const { viewport, camera, gl, size } = useThree()
+
+
+  const secondCamera = useRef()
 
   const textRef = useRef()
 
@@ -84,7 +113,48 @@ export function Scene(props) {
     return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
   }
 
+  useEffect(() => {
+    if (textRef.current) {
+      textRef.current.traverse((child) => {
+        if (child.isObject3D) {
+          child.layers.set(0)
+          child.layers.enable(1)
+        }
+      })
+    }
+  }, [textRef])
+
+  useEffect(() => {
+    if (!camera) return
+    camera.layers.enable(0)
+
+    secondCamera.current = camera.clone()
+
+
+    secondCamera.current.layers.set(1)
+  }, [camera])
+
+
+  const originalBackground = useRef(scene.background)
+  const clearColor = new Color(0x000000)
   useFrame(() => {
+
+    // ...
+    if (!secondCamera.current) return
+    originalBackground.current = scene.background;
+    scene.background = null;
+    gl.setClearColor(clearColor, 0)
+
+    gl.setRenderTarget(cam2RenderTarget);
+    gl.clear()
+    gl.render(scene, secondCamera.current);
+    gl.setRenderTarget(null);
+    scene.background = originalBackground.current
+    gl.setClearColor(clearColor, 1)
+  })
+
+  useFrame(() => {
+
     if (orbitControlsRef.current) {
       const elapsedTime = (Date.now() - startTimeRef.current) / 1000;
 
@@ -148,17 +218,16 @@ export function Scene(props) {
     object.position.copy(finalPosition)
   }
 
-  const textScaleFactor = Math.log2(viewport.width) / 4
   config.scale = scale
-
-
 
   return (
     <>
       <OrbitControls
+        camera={secondCamera.current}
         enableZoom={false}
         enablePan={false}
         enableDamping={true}
+        dampingFactor={.8}
         minPolarAngle={Math.PI / 2.4}
         maxPolarAngle={Math.PI / 1.9}
         minAzimuthAngle={-Math.PI / 20}
@@ -167,83 +236,32 @@ export function Scene(props) {
         ref={orbitControlsRef} />
       {/* goofy remember to remove Leva when usin controls */}
       <Leva hidden />
-      <Plane
-        args={[4000, 2000]}
-        position={[0, 0, -10]}
-      >
-        <meshBasicMaterial
-          toneMapped={false}
-          transparent
-          //map={planeTexture}
-          color={("white")}
-        />
-      </Plane>
 
-      <Html
-        fullscreen
-        occlude={false}
-        style={{
-          background: `url('${RefractGradient}') no-repeat center center fixed`,
-          backgroundSize: '102% 102%',
-          transform: 'translateY(0px)'
-        }}
+      <Environment
+        layers={[0]}
+        files={ENV_REFRACT}
+        toneMapped={false}
+        background={true}
       />
 
-      <group ref={textRef}>
-
-        <Suspense>
-          <Text
-            // fillOpacity={.1}
-            outlineColor={'#2C2C2C'}
-            outlineWidth={.01}
-            position={[0, 0, -.15 * textScaleFactor]}
-            anchorX="left"
-            anchorY="top"
-            castShadow
-            fontSize={1.1 * textScaleFactor}
-            font={MontserratFont}
-            lineHeight={1.1}
-            letterSpacing={.03}
-          >
-
-            {`REFRACT`}
-            <meshBasicMaterial color='#2C2C2C' toneMapped={false} />
-          </Text>
-
-          <Text
-            fillOpacity={0}
-            strokeColor='#2C2C2C'
-            position={[0, -1.2 * textScaleFactor, 0]}
-            anchorX="left"
-            anchorY="top"
-            castShadow
-            fontSize={1.1 * textScaleFactor}
-            strokeWidth={'2.5%'}
-            font={MontserratFont}
-            lineHeight={1.1}
-            letterSpacing={.03}
-          >
-
-            STUDIO
-
-          </Text>
-
-        </Suspense>
-
-        <Float floatingRange={[-.7, 1.8]}>
+      <group ref={textRef} >
+        <Float floatingRange={[-.7, 1.8]} layers={[0, 1]}>
           <SpinningTorus config={config} position={[2.2 * scale, -2.5 * scale, -2.4 * scale]} />
         </Float>
 
-        <Float speed={1.1} floatingRange={[-.3, 1.3]} >
+        <Float speed={1.1} floatingRange={[-.3, 1.3]} layers={[0, 1]} >
           <SpinningBox config={config} position={[6.85 * scale, -.9 * scale, -2.7 * scale]} />
         </Float>
 
-        <Float floatingRange={[-1., 2.]}  >
+        <Float floatingRange={[-1., 2.]} layers={[0, 1]} >
           <Pyramid config={config} position={[11 * scale, -2 * scale, 1.3 * scale]} />
         </Float>
-
       </group >
 
+      <EffectComposer  >
+
+        <RefractPostEffect cam2RenderTarget={cam2RenderTarget} />
+      </EffectComposer>
     </>
   )
 }
@@ -260,15 +278,13 @@ function SpinningTorus(props,) {
 
   return (
     <AnimatedTorus
-      args={[1, 0.4, 64, 200]}
+      args={[1, 0.4, 16, 32]}
       position={props.position}
       {...spinAnimation}
       scale={1 * props.config.scale}
-    //scale={1 * props.config.scale}
     >
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
     </AnimatedTorus>
-
   );
 }
 
@@ -283,22 +299,18 @@ function SpinningBox(props) {
   })
 
   return (
-    <AnimatedRoundedBox {...spinAnimation} castShadow position={props.position} smoothness={64} radius={0.2}>
+    <AnimatedRoundedBox {...spinAnimation} castShadow position={props.position} smoothness={5} radius={0.2}>
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
     </AnimatedRoundedBox>
-
-
   );
 }
-
-
 
 function Pyramid(props) {
   const height = 2
   const sides = 4
   const coneHeight = height / 2
   const coneRadius = 0.5
-  const coneSegments = 64
+  const coneSegments = 32
   const deltaRadius = coneRadius / coneSegments
 
   const vertices = []
@@ -311,7 +323,7 @@ function Pyramid(props) {
 
   return (
     <Cone
-      args={[0.5, 1, coneSegments, 6]}
+      args={[0.5, 1, coneSegments, 4]}
       vertices={vertices}
       position={props.position}
       scale={1.2}
