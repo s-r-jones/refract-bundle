@@ -24,7 +24,7 @@ export default function Refract() {
       <Canvas camera={{ position: [0, 0, 9], far: 50, }} renderer={{ alpha: true }} >
         <ambientLight />
         <Scene />
-        <Perf />
+        {/* <Perf /> */}
       </Canvas>
     </div>
 
