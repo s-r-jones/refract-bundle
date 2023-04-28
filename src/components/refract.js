@@ -1,4 +1,4 @@
-import { useEffect, useRef, Suspense, useMemo } from 'react';
+import { useEffect, useRef, Suspense, useMemo, useState } from 'react';
 import { Canvas, useThree, useFrame, extend } from '@react-three/fiber';
 import {
   MeshTransmissionMaterial,
@@ -8,20 +8,21 @@ import {
   RoundedBox,
   Torus,
   Cone,
+  useTexture,
+  RenderTexture,
+  PerspectiveCamera,
+  ScreenQuad
 } from '@react-three/drei'
-import { EffectComposer, SMAA } from '@react-three/postprocessing';
-
-
+import { EffectComposer, SMAA, } from '@react-three/postprocessing';
 import { useControls, Leva } from 'leva'
-
-import { Vector2, Vector3, WebGLRenderTarget, Color, RGBAFormat, ShaderMaterial } from 'three';
+import { Vector2, Vector3, WebGLRenderTarget, Color, RGBAFormat, ShaderMaterial, UnsignedByteType, FloatType } from 'three';
 import { useSpring, animated } from '@react-spring/three';
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass"
 import ENV_REFRACT from '../assets/Refract_Small.hdr'
 import RefractPostEffect from './post';
-import FXAAEffect from './aa'
-import CustomFXAAEffect from './fxaa'
 import { Perf } from 'r3f-perf';
+
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
+
 
 
 export default function Refract() {
@@ -34,7 +35,8 @@ export default function Refract() {
           <ambientLight layers={[0]} />
           <Scene />
         </Suspense>
-        {/* <Perf /> */}
+
+        <Perf />
       </Canvas>
     </div>
 
@@ -65,53 +67,42 @@ export function Scene({ }) {
   })
 
   const { viewport, gl, size, camera, scene } = useThree()
+
   const pixelRatio = gl.getPixelRatio()
   const composerRef = useRef()
 
   const cam2RenderTarget = useMemo(() => {
-    const renderTarget = new WebGLRenderTarget(size.width, size.height, { format: RGBAFormat });
+    const renderTarget = new WebGLRenderTarget(size.width, size.height, { format: RGBAFormat })
     return renderTarget;
   }, [])
 
   useEffect(() => {
     const handleResize = () => {
-      const newWidth = gl.domElement.clientWidth;
-      const newHeight = gl.domElement.clientHeight;
+      const newWidth = gl.domElement.clientWidth
+      const newHeight = gl.domElement.clientHeight
 
-      cam2RenderTarget.setSize(newWidth, newHeight);
+      cam2RenderTarget.setSize(newWidth, newHeight)
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize)
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleResize)
     };
   }, [cam2RenderTarget, gl])
-
-  function addFXAAPass(composer, viewport, pixelRatio) {
-    const fxaaPass = new ShaderPass(FXAAShader);
-    console.log(composer)
-    fxaaPass.renderToScreen = false
-    fxaaPass.material.uniforms['resolution'].value.x = 1 / (viewport.width * pixelRatio);
-    fxaaPass.material.uniforms['resolution'].value.y = 1 / (viewport.height * pixelRatio);
-
-    composer.addPass(fxaaPass);
-  }
-
-
 
 
   const secondCamera = useRef()
 
   const textRef = useRef()
 
-  const scale = Math.min(1, viewport.width / 16)
+  const scale = Math.min(1, size.width / 16)
 
   const orbitControlsRef = useRef()
   const startTimeRef = useRef(Date.now())
 
-  function easeInOutQuad(t) {
-    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
-  }
+  const originalBackground = useRef(scene.background)
+  const clearColor = new Color(0x000000)
+
 
   useEffect(() => {
     if (textRef.current) {
@@ -124,22 +115,19 @@ export function Scene({ }) {
     }
   }, [textRef])
 
+
   useEffect(() => {
     if (!camera) return
     camera.layers.enable(0)
 
     secondCamera.current = camera.clone()
-
-
     secondCamera.current.layers.set(1)
   }, [camera])
 
 
-  const originalBackground = useRef(scene.background)
-  const clearColor = new Color(0x000000)
   useFrame(() => {
 
-    // ...
+
     if (!secondCamera.current) return
     originalBackground.current = scene.background;
     scene.background = null;
@@ -150,7 +138,8 @@ export function Scene({ }) {
     gl.render(scene, secondCamera.current);
     gl.setRenderTarget(null);
     scene.background = originalBackground.current
-    gl.setClearColor(clearColor, 1)
+
+    gl.setClearColor(clearColor, 0)
   })
 
   useFrame(() => {
@@ -220,6 +209,10 @@ export function Scene({ }) {
 
   config.scale = scale
 
+  const aspect = size.width / size.height;
+  const scaleX = aspect > 1 ? aspect : 1;
+  const scaleY = aspect > 1 ? 1 : 1 / aspect;
+
   return (
     <>
       <OrbitControls
@@ -238,11 +231,14 @@ export function Scene({ }) {
       <Leva hidden />
 
       <Environment
+
         layers={[0]}
         files={ENV_REFRACT}
         toneMapped={false}
         background={true}
+
       />
+
 
       <group ref={textRef} >
         <Float floatingRange={[-.7, 1.8]} layers={[0, 1]}>
@@ -258,10 +254,15 @@ export function Scene({ }) {
         </Float>
       </group >
 
-      <EffectComposer  >
+      <ScreenQuad >
+        <meshBasicMaterial map={cam2RenderTarget} />
+      </ScreenQuad>
 
-        <RefractPostEffect cam2RenderTarget={cam2RenderTarget} />
-      </EffectComposer>
+
+      {/* <EffectComposer multisampling={2} >
+        <RefractPostEffect cam2RenderTarget={cam2RenderTarget} resolution={new Vector2(size.width, size.height)} />
+        <SMAA />
+      </EffectComposer> */}
     </>
   )
 }
@@ -278,12 +279,14 @@ function SpinningTorus(props,) {
 
   return (
     <AnimatedTorus
-      args={[1, 0.4, 16, 32]}
+      args={[1, 0.4, 16, 40]}
       position={props.position}
       {...spinAnimation}
       scale={1 * props.config.scale}
     >
-      <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
+      <MeshTransmissionMaterial  {...props.config} toneMapped={false} >
+        <Torus />
+      </MeshTransmissionMaterial>
     </AnimatedTorus>
   );
 }
@@ -331,4 +334,8 @@ function Pyramid(props) {
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
     </Cone>
   )
+}
+
+function easeInOutQuad(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
 }

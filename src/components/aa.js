@@ -2,8 +2,6 @@ import { forwardRef } from 'react';
 import { Uniform } from 'three';
 import { Effect, FXAAEffect, BlendMode, BlendFunction } from 'postprocessing';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
-console.log(FXAAShader.fragmentShader)
-
 
 
 
