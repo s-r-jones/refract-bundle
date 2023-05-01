@@ -1,6 +1,6 @@
 import { Plane, useTexture, useMask, Billboard } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import map from '../assets/Refract_Small.png'
+import map from '../assets/refract_3.png'
 
 export default function () {
   const { size, camera } = useThree()
