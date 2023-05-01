@@ -8,7 +8,6 @@ import {
   Torus,
   Cone,
   Mask,
-
 } from '@react-three/drei'
 import { useControls, Leva } from 'leva'
 import { Vector2, Vector3, Color } from 'three';
@@ -21,7 +20,7 @@ export default function Refract() {
 
   return (
     <div id="canvas-container" style={{ width: '100vw', height: '100vh' }}>
-      <Canvas camera={{ position: [0, 0, 9], far: 50, }} renderer={{ alpha: true }} >
+      <Canvas camera={{ position: [0, 0, 10], far: 50, }} renderer={{ alpha: true }} >
         <ambientLight />
         <Scene />
         {/* <Perf /> */}
@@ -56,25 +55,10 @@ export function Scene({ }) {
 
   const { gl, size, camera, } = useThree()
 
-  const secondCamera = useRef()
-
   const textRef = useRef()
-
   const scale = Math.min(1, size.width / 16)
-
   const orbitControlsRef = useRef()
   const startTimeRef = useRef(Date.now())
-
-  useEffect(() => {
-    if (textRef.current) {
-      textRef.current.traverse((child) => {
-        if (child.isObject3D) {
-          child.layers.set(0)
-          child.layers.enable(1)
-        }
-      })
-    }
-  }, [textRef])
 
   useFrame(() => {
 
@@ -85,7 +69,7 @@ export function Scene({ }) {
         const easedProgress = easeInOutQuad((elapsedTime / 4) % 1);
 
         const initialPolarAngle = Math.PI / 2.1;
-        const targetPolarAngle = initialPolarAngle + 0.04 * Math.sin(easedProgress * Math.PI * 2);
+        const targetPolarAngle = initialPolarAngle + 0.08 * Math.sin(easedProgress * Math.PI * 2);
         orbitControlsRef.current.setPolarAngle(targetPolarAngle);
 
         const initialAzimuthalAngle = 0;
@@ -97,8 +81,6 @@ export function Scene({ }) {
         //orbitControlsRef.current.reset();
       }
     }
-
-
   })
 
   useEffect(() => {
@@ -146,40 +128,36 @@ export function Scene({ }) {
   return (
     <>
       <OrbitControls
-        camera={secondCamera.current}
         enableZoom={false}
         enablePan={false}
         enableDamping={true}
-        dampingFactor={.8}
-        minPolarAngle={Math.PI / 2.2}
-        maxPolarAngle={Math.PI / 1.9}
-        minAzimuthAngle={-Math.PI / 20}
-        maxAzimuthAngle={Math.PI / 16}
+        dampingFactor={.05}
+        minPolarAngle={-Math.PI / 8}
+        maxPolarAngle={Math.PI / 1.6}
+        minAzimuthAngle={-Math.PI / 2.5}
+        maxAzimuthAngle={Math.PI / 4}
         makeDefault
         ref={orbitControlsRef} />
-      {/* goofy remember to remove Leva when usin controls */}
-      {/* <Leva hidden /> */}
+
+      <Leva hidden />
 
       <Quad />
 
       <group ref={textRef} >
         <Mask id={1}>
           <Float floatingRange={[-.7, 1.8]} layers={[0, 1]}>
-            <SpinningTorus config={config} position={[2.2 * scale, -2.5 * scale, -2.4 * scale]} />
+            <SpinningTorus config={config} position={[.7 * scale, -2.5 * scale, -2.4 * scale]} />
           </Float>
-
 
           <Float speed={1.1} floatingRange={[-.3, 1.3]} layers={[0, 1]} >
-            <SpinningBox config={config} position={[6.85 * scale, -.9 * scale, -2.7 * scale]} />
+            <SpinningBox config={config} position={[6 * scale, -.9 * scale, -2.7 * scale]} />
           </Float>
 
-
           <Float floatingRange={[-1., 2.]} layers={[0, 1]} >
-            <Pyramid config={config} position={[11 * scale, -2 * scale, 1.3 * scale]} />
+            <Pyramid config={config} position={[9.8 * scale, -2 * scale, 1.3 * scale]} />
           </Float>
         </Mask>
       </group >
-
     </>
   )
 }
