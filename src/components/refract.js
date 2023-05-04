@@ -60,25 +60,30 @@ export function Scene({ }) {
   const orbitControlsRef = useRef()
   const startTimeRef = useRef(Date.now())
 
+  const topLeftOffsetRef = useRef(new Vector2());
+  const screenPositionRef = useRef(new Vector2(-1, 1));
+  const worldPositionRef = useRef(new Vector3());
+
   const updateObjectPosition = useCallback((camera, object, renderer) => {
-    const screenHeight = renderer.domElement.clientHeight
-    const screenWidth = renderer.domElement.clientWidth
-    const yOffset = screenHeight >= 900 ? 160 : 30 + (screenHeight - 375) * (130 / (900 - 375))
-    const xOffset = screenWidth >= 900 ? 60 : 20 + (screenWidth - 375) * (40 / (900 - 375))
-    const topLeftOffset = new Vector2(xOffset, yOffset)
+    const screenHeight = renderer.domElement.clientHeight;
+    const screenWidth = renderer.domElement.clientWidth;
+    const yOffset = screenHeight >= 900 ? 160 : 30 + (screenHeight - 375) * (130 / (900 - 375));
+    const xOffset = screenWidth >= 900 ? 60 : 20 + (screenWidth - 375) * (40 / (900 - 375));
 
-    const screenPosition = new Vector2(-1, 1)
-    screenPosition.x += (topLeftOffset.x / renderer.domElement.clientWidth) * 2
-    screenPosition.y -= (topLeftOffset.y / renderer.domElement.clientHeight) * 2
+    topLeftOffsetRef.current.set(xOffset, yOffset);
 
-    const worldPosition = new Vector3(screenPosition.x, screenPosition.y, 0.5)
-    worldPosition.unproject(camera);
+    screenPositionRef.current.x = -1 + (topLeftOffsetRef.current.x / renderer.domElement.clientWidth) * 2;
+    screenPositionRef.current.y = 1 - (topLeftOffsetRef.current.y / renderer.domElement.clientHeight) * 2;
 
-    const direction = worldPosition.sub(camera.position).normalize()
-    const finalPosition = camera.position.clone().add(direction.multiplyScalar(10))
+    worldPositionRef.current.set(screenPositionRef.current.x, screenPositionRef.current.y, 0.5);
+    worldPositionRef.current.unproject(camera);
 
-    object.position.copy(finalPosition)
-  }, [])
+    const direction = worldPositionRef.current.sub(camera.position).normalize();
+    const finalPosition = camera.position.clone().add(direction.multiplyScalar(10));
+
+    object.position.copy(finalPosition);
+  }, []);
+
 
   useFrame(() => {
 
@@ -104,6 +109,7 @@ export function Scene({ }) {
   })
 
   useEffect(() => {
+
     updateObjectPosition(camera, textRef.current, gl)
 
     const handleResize = () => {
@@ -119,6 +125,7 @@ export function Scene({ }) {
 
   config.scale = scale
 
+  console.log('howdy, im renderin!')
   return (
     <>
       <OrbitControls
