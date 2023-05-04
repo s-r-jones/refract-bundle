@@ -1,5 +1,5 @@
-import { useEffect, useRef, Suspense, useMemo, useState } from 'react';
-import { Canvas, useThree, useFrame, extend } from '@react-three/fiber';
+import { useEffect, useRef, useCallback, memo } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import {
   MeshTransmissionMaterial,
   OrbitControls,
@@ -10,7 +10,7 @@ import {
   Mask,
 } from '@react-three/drei'
 import { useControls, Leva } from 'leva'
-import { Vector2, Vector3, Color } from 'three';
+import { Vector2, Vector3 } from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { Perf } from 'r3f-perf';
 import Quad from './quad'
@@ -23,7 +23,7 @@ export default function Refract() {
       <Canvas camera={{ position: [0, 0, 10], far: 50, }} renderer={{ alpha: true }} >
         <ambientLight />
         <Scene />
-        {/* <Perf /> */}
+        <Perf position="top-left" />
       </Canvas>
     </div>
 
@@ -36,7 +36,7 @@ export function Scene({ }) {
     // transmissionSampler: false,
     // backside: true,
     //samples: { value: 10, min: 1, max: 32, step: 1 },
-    //resolution: { value: 32, min: 256, max: 2048, step: 256 },
+    resolution: { value: 512, min: 256, max: 2048, step: 256 },
     transmission: { value: .85, min: 0, max: 1 },
     roughness: { value: 0.08, min: 0, max: 1, step: 0.01 },
     thickness: { value: 2.41, min: 0, max: 10, step: 0.01 },
@@ -59,6 +59,26 @@ export function Scene({ }) {
   const scale = Math.min(1, size.width / 16)
   const orbitControlsRef = useRef()
   const startTimeRef = useRef(Date.now())
+
+  const updateObjectPosition = useCallback((camera, object, renderer) => {
+    const screenHeight = renderer.domElement.clientHeight
+    const screenWidth = renderer.domElement.clientWidth
+    const yOffset = screenHeight >= 900 ? 160 : 30 + (screenHeight - 375) * (130 / (900 - 375))
+    const xOffset = screenWidth >= 900 ? 60 : 20 + (screenWidth - 375) * (40 / (900 - 375))
+    const topLeftOffset = new Vector2(xOffset, yOffset)
+
+    const screenPosition = new Vector2(-1, 1)
+    screenPosition.x += (topLeftOffset.x / renderer.domElement.clientWidth) * 2
+    screenPosition.y -= (topLeftOffset.y / renderer.domElement.clientHeight) * 2
+
+    const worldPosition = new Vector3(screenPosition.x, screenPosition.y, 0.5)
+    worldPosition.unproject(camera);
+
+    const direction = worldPosition.sub(camera.position).normalize()
+    const finalPosition = camera.position.clone().add(direction.multiplyScalar(10))
+
+    object.position.copy(finalPosition)
+  }, [])
 
   useFrame(() => {
 
@@ -94,34 +114,8 @@ export function Scene({ }) {
     return () => {
       window.removeEventListener('resize', handleResize)
     }
-  }, [camera, textRef, gl])
+  }, [camera, textRef, gl, updateObjectPosition])
 
-
-  function updateObjectPosition(camera, object, renderer) {
-    // const topLeftOffset = new Vector2(60, 120) // Adjust these values to control the position relative to the top-left corner (in pixels)
-
-    //const xOffset = 60
-    const screenHeight = renderer.domElement.clientHeight
-    const screenWidth = renderer.domElement.clientWidth
-    const yOffset = screenHeight >= 900 ? 160 : 30 + (screenHeight - 375) * (130 / (900 - 375))
-    const xOffset = screenWidth >= 900 ? 60 : 20 + (screenWidth - 375) * (40 / (900 - 375))
-    const topLeftOffset = new Vector2(xOffset, yOffset)
-
-    // Calculate the screen space position
-    const screenPosition = new Vector2(-1, 1)
-    screenPosition.x += (topLeftOffset.x / renderer.domElement.clientWidth) * 2
-    screenPosition.y -= (topLeftOffset.y / renderer.domElement.clientHeight) * 2
-
-    // Calculate the world position
-    const worldPosition = new Vector3(screenPosition.x, screenPosition.y, 0.5)
-    worldPosition.unproject(camera);
-
-    const direction = worldPosition.sub(camera.position).normalize()
-    const finalPosition = camera.position.clone().add(direction.multiplyScalar(10))
-
-    // Update the object's position
-    object.position.copy(finalPosition)
-  }
 
   config.scale = scale
 
@@ -146,15 +140,15 @@ export function Scene({ }) {
       <group ref={textRef} >
         <Mask id={1}>
           <Float floatingRange={[-.7, 1.8]} layers={[0, 1]}>
-            <SpinningTorus config={config} position={[.7 * scale, -2.5 * scale, -2.4 * scale]} />
+            <TorusMemo config={config} position={[.7 * scale, -2.5 * scale, -2.4 * scale]} />
           </Float>
 
           <Float speed={1.1} floatingRange={[-.3, 1.3]} layers={[0, 1]} >
-            <SpinningBox config={config} position={[6 * scale, -.9 * scale, -2.7 * scale]} />
+            <BoxMemo config={config} position={[6 * scale, -.9 * scale, -2.7 * scale]} />
           </Float>
 
           <Float floatingRange={[-1., 2.]} layers={[0, 1]} >
-            <Pyramid config={config} position={[9.8 * scale, -2 * scale, 1.3 * scale]} />
+            <ConeMemo config={config} position={[9.8 * scale, -2 * scale, 1.3 * scale]} />
           </Float>
         </Mask>
       </group >
@@ -174,7 +168,7 @@ function SpinningTorus(props,) {
 
   return (
     <AnimatedTorus
-      args={[1, 0.4, 32, 64]}
+      args={[1, 0.4, 32, 32]}
       position={props.position}
       {...spinAnimation}
       scale={1 * props.config.scale}
@@ -185,6 +179,8 @@ function SpinningTorus(props,) {
     </AnimatedTorus>
   );
 }
+
+const TorusMemo = memo(SpinningTorus)
 
 const AnimatedRoundedBox = animated(RoundedBox);
 
@@ -197,18 +193,19 @@ function SpinningBox(props) {
   })
 
   return (
-    <AnimatedRoundedBox {...spinAnimation} castShadow position={props.position} smoothness={4} radius={0.22}>
+    <AnimatedRoundedBox {...spinAnimation} castShadow position={props.position} smoothness={3} radius={0.22}>
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
     </AnimatedRoundedBox>
   );
 }
 
+const BoxMemo = memo(SpinningBox)
+
 function Pyramid(props) {
   const height = 2
-  const sides = 4
   const coneHeight = height / 2
   const coneRadius = 0.5
-  const coneSegments = 32
+  const coneSegments = 20
   const deltaRadius = coneRadius / coneSegments
 
   const vertices = []
@@ -230,6 +227,8 @@ function Pyramid(props) {
     </Cone>
   )
 }
+
+const ConeMemo = memo(Pyramid)
 
 function easeInOutQuad(t) {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
