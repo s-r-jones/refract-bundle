@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, memo } from 'react';
+import { useRef, memo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import {
   MeshTransmissionMaterial,
@@ -9,8 +9,9 @@ import {
   Cone,
   Mask,
 } from '@react-three/drei'
+import { Flex, Box } from '@react-three/flex'
+import { useMediaQuery } from 'react-responsive'
 import { useControls, Leva } from 'leva'
-import { Vector2, Vector3 } from 'three';
 import { useSpring, animated } from '@react-spring/three';
 import { Perf } from 'r3f-perf';
 import Quad from './quad'
@@ -20,10 +21,9 @@ export default function Refract() {
 
   return (
     <div id="canvas-container" style={{ width: '100vw', height: '100vh' }}>
-      <Canvas camera={{ position: [0, 0, 10], far: 50, }} renderer={{ alpha: true }} >
-        <ambientLight />
+      <Canvas camera={{ position: [0, 0, 10], far: 20, }} renderer={{ alpha: true }} >
         <Scene />
-        <Perf position="top-left" />
+        {/* <Perf position="top-left" /> */}
       </Canvas>
     </div>
 
@@ -53,37 +53,11 @@ export function Scene({ }) {
 
   })
 
-  const { gl, size, camera, } = useThree()
+  const { size, } = useThree()
 
-  const textRef = useRef()
   const scale = Math.min(1, size.width / 16)
   const orbitControlsRef = useRef()
   const startTimeRef = useRef(Date.now())
-
-  const topLeftOffsetRef = useRef(new Vector2());
-  const screenPositionRef = useRef(new Vector2(-1, 1));
-  const worldPositionRef = useRef(new Vector3());
-
-  const updateObjectPosition = useCallback((camera, object, renderer) => {
-    const screenHeight = renderer.domElement.clientHeight;
-    const screenWidth = renderer.domElement.clientWidth;
-    const yOffset = screenHeight >= 900 ? 160 : 30 + (screenHeight - 375) * (130 / (900 - 375));
-    const xOffset = screenWidth >= 900 ? 60 : 20 + (screenWidth - 375) * (40 / (900 - 375));
-
-    topLeftOffsetRef.current.set(xOffset, yOffset);
-
-    screenPositionRef.current.x = -1 + (topLeftOffsetRef.current.x / renderer.domElement.clientWidth) * 2;
-    screenPositionRef.current.y = 1 - (topLeftOffsetRef.current.y / renderer.domElement.clientHeight) * 2;
-
-    worldPositionRef.current.set(screenPositionRef.current.x, screenPositionRef.current.y, 0.5);
-    worldPositionRef.current.unproject(camera);
-
-    const direction = worldPositionRef.current.sub(camera.position).normalize();
-    const finalPosition = camera.position.clone().add(direction.multiplyScalar(10));
-
-    object.position.copy(finalPosition);
-  }, []);
-
 
   useFrame(() => {
 
@@ -102,30 +76,15 @@ export function Scene({ }) {
         orbitControlsRef.current.setAzimuthalAngle(targetAzimuthalAngle);
 
         orbitControlsRef.current.update();
-      } else {
-        //orbitControlsRef.current.reset();
       }
     }
   })
 
-  useEffect(() => {
-
-    updateObjectPosition(camera, textRef.current, gl)
-
-    const handleResize = () => {
-      updateObjectPosition(camera, textRef.current, gl)
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => {
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [camera, textRef, gl, updateObjectPosition])
-
+  const isTablet = useMediaQuery({ minWidth: 768 })
 
   config.scale = scale
 
-  console.log('howdy, im renderin!')
+
   return (
     <>
       <OrbitControls
@@ -144,21 +103,27 @@ export function Scene({ }) {
 
       <Quad />
 
-      <group ref={textRef} >
+      <Flex size={[size.width, size.height, 0]} flexDirection={isTablet ? 'row' : 'column'} position={isTablet ? [0, 0, 4] : [0, 0, 1]} >
+
         <Mask id={1}>
-          <Float floatingRange={[-.7, 1.8]} layers={[0, 1]}>
-            <TorusMemo config={config} position={[.7 * scale, -2.5 * scale, -2.4 * scale]} />
-          </Float>
-
-          <Float speed={1.1} floatingRange={[-.3, 1.3]} layers={[0, 1]} >
-            <BoxMemo config={config} position={[6 * scale, -.9 * scale, -2.7 * scale]} />
-          </Float>
-
-          <Float floatingRange={[-1., 2.]} layers={[0, 1]} >
-            <ConeMemo config={config} position={[9.8 * scale, -2 * scale, 1.3 * scale]} />
-          </Float>
+          <Box marginTop={isTablet ? -2 : -4} marginLeft={isTablet ? 2 : 1}>
+            <Float speed={1.1} floatingRange={[-.3, 1.3]} layers={[0, 1]} >
+              <BoxMemo config={config} />
+            </Float>
+          </Box>
+          <Box marginTop={isTablet ? 2 : 2} marginLeft={isTablet ? -4 : -1.5}>
+            <Float floatingRange={[-.7, 1.8]} layers={[0, 1]}>
+              <TorusMemo config={config} />
+            </Float>
+          </Box>
+          <Box marginTop={isTablet ? 2 : -3} marginLeft={isTablet ? 6 : 2.5} >
+            <Float floatingRange={[-1., 2.]} layers={[0, 1]} >
+              <ConeMemo config={config} />
+            </Float>
+          </Box>
         </Mask>
-      </group >
+
+      </Flex>
     </>
   )
 }
@@ -176,7 +141,7 @@ function SpinningTorus(props,) {
   return (
     <AnimatedTorus
       args={[1, 0.4, 32, 32]}
-      position={props.position}
+
       {...spinAnimation}
       scale={1 * props.config.scale}
     >
@@ -200,7 +165,7 @@ function SpinningBox(props) {
   })
 
   return (
-    <AnimatedRoundedBox {...spinAnimation} castShadow position={props.position} smoothness={3} radius={0.22}>
+    <AnimatedRoundedBox {...spinAnimation} castShadow smoothness={4} radius={0.22}>
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
     </AnimatedRoundedBox>
   );
@@ -227,7 +192,7 @@ function Pyramid(props) {
     <Cone
       args={[0.5, 1, coneSegments, 4]}
       vertices={vertices}
-      position={props.position}
+
       scale={1.2}
       rotation={[Math.PI / 3, 0, Math.PI / 4]}>
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />

@@ -24,6 +24,7 @@
     "r3f-perf": "^7.1.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-responsive": "^9.0.2",
     "react-spring": "^9.7.1",
     "three": "^0.150.1",
     "three-stdlib": "^2.21.8"
