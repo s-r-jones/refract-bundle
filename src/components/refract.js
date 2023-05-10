@@ -76,11 +76,16 @@ function Scene() {
 
   })
 
-  const { size } = useThree()
 
+  const isTablet = useMediaQuery({ minWidth: 768 })
 
   const orbitControlsRef = useRef()
   const startTimeRef = useRef(Date.now())
+
+
+  const boxPosition = isTablet ? [.5, 2.7, 4] : [1.25, 2.7, 1.75];
+  const torusPosition = isTablet ? [-.25, -2.25, 4] : [-1.5, -2.5, 1.75];
+  const conePosition = isTablet ? [4.5, -1, 4] : [2., -1, 1.55]
 
   useFrame(() => {
 
@@ -103,7 +108,7 @@ function Scene() {
     }
   })
 
-  const isTablet = useMediaQuery({ minWidth: 768 })
+
 
   return (
     <>
@@ -121,25 +126,25 @@ function Scene() {
 
       <Quad />
 
-      <Flex size={[size.width, size.height, 0]} flexDirection={isTablet ? 'row' : 'column'} position={isTablet ? [0, 0, 4] : [0, 0, 1]} >
-        <Mask id={1}>
-          <Box marginTop={isTablet ? -2 : -4} marginLeft={isTablet ? 2 : 1}>
-            <Float speed={0} floatingRange={[-.3, 1.3]}  >
-              <BoxMemo config={config} />
-            </Float>
-          </Box>
-          <Box marginTop={isTablet ? 2 : 2} marginLeft={isTablet ? -4 : -1.5}>
-            <Float floatingRange={[-.7, 1.8]} speed={0}>
-              <TorusMemo config={config} />
-            </Float>
-          </Box>
-          <Box marginTop={isTablet ? 1.5 : -3} marginLeft={isTablet ? 3.8 : 2.5} >
-            <Float floatingRange={[-1., 2.]}  >
-              <ConeMemo config={config} />
-            </Float>
-          </Box>
-        </Mask>
-      </Flex>
+
+      <Mask id={1}>
+
+        <Float speed={.3} floatingRange={[-.3, 1.3]} position={boxPosition} >
+          <BoxMemo config={config} />
+        </Float>
+
+
+        <Float floatingRange={[-.7, 1.8]} speed={1} position={torusPosition}>
+          <TorusMemo config={config} />
+        </Float>
+
+
+        <Float floatingRange={[-1., 2.]} speed={.8} position={conePosition}>
+          <ConeMemo config={config} />
+        </Float>
+
+      </Mask>
+
     </>
   )
 }
@@ -155,15 +160,14 @@ function SpinningTorus(props) {
   })
 
   return (
-    <Torus
+    <AnimatedTorus
       args={[1, 0.4, 32, 64]}
-
-
+      {...spinAnimation}
     >
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} >
 
       </MeshTransmissionMaterial>
-    </Torus>
+    </AnimatedTorus>
   );
 }
 
@@ -178,9 +182,9 @@ function SpinningBox(props) {
     config: { duration: 25000, },
     loop: { reverse: false, reset: true }, // Loop the animation forever
   })
-  console.log(MATERIAL_CONFIG)
+
   return (
-    <AnimatedRoundedBox {...spinAnimation} castShadow smoothness={4} radius={0.22}>
+    <AnimatedRoundedBox {...spinAnimation} castShadow smoothness={5} radius={0.22}>
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
     </AnimatedRoundedBox>
   );
@@ -207,7 +211,6 @@ function Pyramid(props) {
     <Cone
       args={[0.5, 1, coneSegments, 4]}
       vertices={vertices}
-
       scale={1.2}
       rotation={[Math.PI / 3, 0, Math.PI / 4]}>
       <MeshTransmissionMaterial  {...props.config} toneMapped={false} />
