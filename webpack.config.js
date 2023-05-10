@@ -83,7 +83,7 @@ module.exports = {
       template: './public/index.html',
     }),
     new ImageminPlugin({
-      pngquant: ({ quality: '55-85', speed: 4 }),
+      pngquant: ({ quality: '75-90', speed: 4 }),
       jpegtran: {
         progressive: true,
       },

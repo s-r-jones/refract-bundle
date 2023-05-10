@@ -8,21 +8,31 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <title>Your Component</title>
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
     #canvas-container {
-      width: 100vw;
-      height: 90vh;
       background: url(images/refract_gradient.png) no-repeat center center fixed;
       -webkit-background-size: cover;
       -moz-background-size: cover;
       -o-background-size: cover;
       background-size: cover;
+    }
 
+    #first {
+      width: 100vw;
+      height: 700px;
+      background-color: aquamarine;
     }
   </style>
 </head>
 
 <body>
   <div id="three-root"></div>
+  <div id="first"></div>
 
   <script src="bundle.js"></script>
 </body>
