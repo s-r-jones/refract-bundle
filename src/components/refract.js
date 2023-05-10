@@ -1,5 +1,5 @@
-import { useRef, memo, Suspense } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { useRef, memo, } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import {
   MeshTransmissionMaterial,
   OrbitControls,
@@ -9,35 +9,10 @@ import {
   Cone,
   Mask,
 } from '@react-three/drei'
-import { Flex, Box } from '@react-three/flex'
 import { useMediaQuery } from 'react-responsive'
 import { useControls, Leva } from 'leva'
 import { useSpring, animated } from '@react-spring/three';
-import { Perf } from 'r3f-perf';
-import Quad, { useQuadContext } from './quad'
-
-const MATERIAL_CONFIG = {
-
-  transmissionSampler: false,
-  // backside: true,
-  //samples: { value: 10, min: 1, max: 32, step: 1 },
-  resolution: { value: 512, min: 256, max: 2048, step: 256 },
-  transmission: { value: .85, min: 0, max: 1 },
-  roughness: { value: 0.08, min: 0, max: 1, step: 0.01 },
-  thickness: { value: 2.41, min: 0, max: 10, step: 0.01 },
-  ior: { value: 1.04, min: 1, max: 5, step: 0.01 },
-  chromaticAberration: { value: 1.0, min: 0, max: 1 },
-  anisotropy: { value: .0, min: 0, max: 1, step: 0.01 },
-  distortion: { value: 0.23, min: 0, max: 1, step: 0.01 },
-  distortionScale: { value: 0.63, min: 0.01, max: 1, step: 0.01 },
-  temporalDistortion: { value: 0.3, min: 0, max: 1, step: 0.01 },
-  clearcoat: { value: 0, min: 0, max: 1 },
-  attenuationDistance: { value: 10., min: 0, max: 10, step: 0.01 },
-  attenuationColor: '#ffffff',
-  color: '#ffffff',
-
-}
-
+import Quad from './quad'
 
 export default function Refract() {
 
@@ -109,7 +84,6 @@ function Scene() {
   })
 
 
-
   return (
     <>
       <OrbitControls
@@ -125,7 +99,6 @@ function Scene() {
         ref={orbitControlsRef} />
 
       <Quad />
-
 
       <Mask id={1}>
 
