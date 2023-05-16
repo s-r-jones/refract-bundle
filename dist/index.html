@@ -1,0 +1,33 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://unpkg.com/react@18/umd/react.production.min.js"></script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script><title>Your Component</title><style>body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    #canvas-container {
+      background: url(images/refract_gradient.png) no-repeat center center fixed;
+      -webkit-background-size: cover;
+      -moz-background-size: cover;
+      -o-background-size: cover;
+      background-size: cover;
+    }
+
+    #first {
+      width: 100vw;
+      height: 700px;
+      background-color: aquamarine;
+    }
+
+    #text {
+      position: absolute;
+      top: 20%;
+      left: 10%;
+      font-size: 130px;
+      line-height: '110%';
+      font-weight: 800;
+
+      @media screen and (max-width: 768px) {
+        font-size: 60px;
+      }
+
+    }</style><script defer="defer" src="bundle.js"></script></head><body><div id="three-root"></div><div id="text"><div>REFRACT</div><div>STUDIO</div></div><div id="first"></div><script src="bundle.js"></script></body></html>
