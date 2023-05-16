@@ -58,9 +58,9 @@ function Scene() {
   const startTimeRef = useRef(Date.now())
 
 
-  const boxPosition = isTablet ? [.5, 2.7, 4] : [1.25, 2.7, 1.75];
-  const torusPosition = isTablet ? [-.25, -2.25, 4] : [-1.5, -2.5, 1.75];
-  const conePosition = isTablet ? [4.5, -1, 4] : [2., -1, 1.55]
+  const boxPosition = isTablet ? [2.5, 2.2, 4] : [1.25, 2.2, 1.75];
+  const torusPosition = isTablet ? [1.2, -2.25, 4] : [-1.5, -2.5, 1.75];
+  const conePosition = isTablet ? [5.2, -1, 4] : [2., -1, 1.75]
 
   useFrame(() => {
 
@@ -102,17 +102,17 @@ function Scene() {
 
       <Mask id={1}>
 
-        <Float speed={.3} floatingRange={[-.3, 1.3]} position={boxPosition} >
+        <Float speed={.5} floatingRange={[-.2, 1.]} position={boxPosition} >
           <BoxMemo config={config} />
         </Float>
 
 
-        <Float floatingRange={[-.7, 1.8]} speed={1} position={torusPosition}>
+        <Float floatingRange={[.1, 1.8]} speed={1} position={torusPosition}>
           <TorusMemo config={config} />
         </Float>
 
 
-        <Float floatingRange={[-1., 2.]} speed={.8} position={conePosition}>
+        <Float floatingRange={[1, 2.]} speed={1} position={conePosition} rotationIntensity={.1}>
           <ConeMemo config={config} />
         </Float>
 
@@ -152,7 +152,7 @@ function SpinningBox(props) {
   const spinAnimation = useSpring({
     rotation: [Math.PI * 4, 0, Math.PI * 4],
     from: { rotation: [0, 0, 0] },
-    config: { duration: 25000, },
+    config: { duration: 35000, },
     loop: { reverse: false, reset: true }, // Loop the animation forever
   })
 
