@@ -58,9 +58,9 @@ function Scene() {
   const startTimeRef = useRef(Date.now())
 
 
-  const boxPosition = isTablet ? [2.5, 2.2, 4] : [1.25, 2.2, 1.75];
-  const torusPosition = isTablet ? [1.2, -2.25, 4] : [-1.5, -2.5, 1.75];
-  const conePosition = isTablet ? [5.2, -1, 4] : [2., -1, 1.75]
+  const boxPosition = isTablet ? [3., 2.2, 4] : [1., 3.25, 1.75];
+  const torusPosition = isTablet ? [1.7, -2.25, 4] : [-.45, -.8, 1.75];
+  const conePosition = isTablet ? [5.7, -1, 4] : [1.8, 0, 1.75]
 
   useFrame(() => {
 
@@ -107,12 +107,12 @@ function Scene() {
         </Float>
 
 
-        <Float floatingRange={[.1, 1.8]} speed={1} position={torusPosition}>
+        <Float floatingRange={[.2, 1.8]} speed={1} position={torusPosition}>
           <TorusMemo config={config} />
         </Float>
 
 
-        <Float floatingRange={[1, 2.]} speed={1} position={conePosition} rotationIntensity={.1}>
+        <Float floatingRange={[1, 2.]} speed={1.5} position={conePosition} >
           <ConeMemo config={config} />
         </Float>
 
